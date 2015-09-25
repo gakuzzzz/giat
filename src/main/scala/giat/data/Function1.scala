@@ -22,10 +22,12 @@ trait Function1Definition {
 
 trait Function1Instances {
 
-  protected def kleisliMonad[F[_], E](implicit mf: Monad[F]): Monad[Kleisli[F, E, ?]] = new Monad[Kleisli[F, E, ?]] {
-    override def point[A](a: => A): Kleisli[F, E, A] = _ => mf.point(a)
-    override def flatMap[A, B](fa: Kleisli[F, E, A])(f: A => Kleisli[F, E, B]): Kleisli[F, E, B] = { e: E =>
-      mf.flatMap(fa(e)) { a: A => f(a)(e) }
+  import Monad.ops._
+
+  protected def kleisliMonad[F[_]: Monad, E]: Monad[Kleisli[F, E, ?]] = new Monad[Kleisli[F, E, ?]] {
+    override def point[A](a: => A): Kleisli[F, E, A] = _ => Monad[F].point(a)
+    override def flatMap[A, B](fa: Kleisli[F, E, A])(f: A => Kleisli[F, E, B]): Kleisli[F, E, B] = { e =>
+      fa(e).flatMap { a: A => f(a)(e) }
     }
   }
 
