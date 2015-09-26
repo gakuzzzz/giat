@@ -5,6 +5,7 @@ import simulacrum.typeclass
 
 @typeclass
 trait Applicative[F[_]] extends Apply[F] {
+  override type MapGuard <: Applicative[F]
 
   def point[A](a: => A): F[A]
 

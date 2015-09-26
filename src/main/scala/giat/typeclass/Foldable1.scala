@@ -4,8 +4,8 @@ package typeclass
 import simulacrum.typeclass
 
 @typeclass
-trait Foldable1[F[_]] extends Foldable[F] with LinearizeGuardian {
-  override type Guard <: Foldable1[F]
+trait Foldable1[F[_]] extends Foldable[F] {
+  override type FoldMapGuard <: Foldable1[F]
 
   def foldMap1[A, B: Semigroup](fa: F[A])(f: A => B): B
 
