@@ -6,14 +6,19 @@ import giat.typeclass._
 
 trait EitherInstances {
 
-  protected def right[L]: Traverse[Either[L, ?]] with Monad[Either[L, ?]] = new Traverse[Either[L, ?]] with Monad[Either[L, ?]] {
-    override def point[A](a: => A): Either[L, A] = Right(a)
+  protected trait RightTraverse[L] extends Traverse[Either[L, ?]] {
     override def traverse[G[_]: Applicative, A, B](fa: Either[L, A])(f: A => G[B]): G[Either[L, B]] = fa match {
       case Left(x)  => Applicative[G].point(Left(x))
       case Right(x) => Applicative[G].map(f(x))(Right.apply)
     }
-    override def flatMap[A, B](fa: Either[L, A])(f: A => Either[L, B]): Either[L, B] = fa.right.flatMap(f)
-    override def map[A, B](fa: Either[L, A])(f: A => B): Either[L, B] = fa.right.map(f)
+    override final def map[A, B](fa: Either[L, A])(f: A => B): Either[L, B] = fa.right.map(f)
+  }
+
+  protected def right[L]: Traverse[Either[L, ?]] with Monad[Either[L, ?]] = {
+    new Traverse[Either[L, ?]] with Monad[Either[L, ?]] with RightTraverse[L] {
+      override def point[A](a: => A): Either[L, A] = Right(a)
+      override def flatMap[A, B](fa: Either[L, A])(f: A => Either[L, B]): Either[L, B] = fa.right.flatMap(f)
+    }
   }
 
   protected def left[R]: Traverse[Either[?, R]] with Monad[Either[?, R]] = new Traverse[Either[?, R]] with Monad[Either[?, R]] {
@@ -26,18 +31,16 @@ trait EitherInstances {
     override def map[A, B](fa: Either[A, R])(f: A => B): Either[B, R] = fa.left.map(f)
   }
 
-  protected def validation[L: Semigroup]: Traverse[Either[L, ?]] with Applicative[Either[L, ?]] = new Traverse[Either[L, ?]] with Applicative[Either[L, ?]] {
-    override def point[A](a: => A): Either[L, A] = Right(a)
-    override def traverse[G[_]: Applicative, A, B](fa: Either[L, A])(f: A => G[B]): G[Either[L, B]] = fa match {
-      case Left(x)  => Applicative[G].point(Left(x))
-      case Right(x) => Applicative[G].map(f(x))(Right.apply)
-    }
-    import Semigroup.ops._
-    override def ap[A, B](fa: => Either[L, A])(ff: => Either[L, A => B]): Either[L, B] = (fa, ff) match {
-      case (Left(x), Left(y))   => Left(x |+| y)
-      case (Right(a), Right(f)) => Right(f(a))
-      case (Left(x), Right(_))  => Left(x)
-      case (Right(_), Left(x))  => Left(x)
+  protected def validation[L: Semigroup]: Traverse[Either[L, ?]] with Applicative[Either[L, ?]] = {
+    new Traverse[Either[L, ?]] with Applicative[Either[L, ?]] with RightTraverse[L] {
+      override def point[A](a: => A): Either[L, A] = Right(a)
+      import Semigroup.ops._
+      override def ap[A, B](fa: => Either[L, A])(ff: => Either[L, A => B]): Either[L, B] = (fa, ff) match {
+        case (Left(x), Left(y))   => Left(x |+| y)
+        case (Right(a), Right(f)) => Right(f(a))
+        case (Left(x), Right(_))  => Left(x)
+        case (Right(_), Left(x))  => Left(x)
+      }
     }
   }
 
