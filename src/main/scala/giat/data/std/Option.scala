@@ -19,21 +19,18 @@ trait OptionInstances {
 
   protected def first[A]: Monoid[Option[A]] = new Monoid[Option[A]] {
     override def zero = None
-    override def op(a: Option[A], b: => Option[A]) = a
+    override def op(a: Option[A], b: => Option[A]) = a orElse b
   }
 
   protected def last[A]: Monoid[Option[A]] = new Monoid[Option[A]] {
     override def zero = None
-    override def op(a: Option[A], b: => Option[A]) = b
+    override def op(a: Option[A], b: => Option[A]) = b orElse a
   }
 
   protected def delegate[A: Semigroup]: Monoid[Option[A]] = new Monoid[Option[A]] {
     import Semigroup.ops._
     override def zero = None
-    override def op(a: Option[A], b: => Option[A]) = (a, b) match {
-      case (Some(x), Some(y)) => Some(x |+| y)
-      case _ => a orElse b
-    }
+    override def op(a: Option[A], b: => Option[A]) = default.apply2(a, b)(_ |+| _)
   }
 
 }
@@ -51,13 +48,15 @@ object Option extends OptionInstances { self =>
   object monoid {
     implicit def first[A]: Monoid[Option[A]] = self.first[A]
     implicit def last[A]: Monoid[Option[A]] = self.last[A]
-    implicit def delegate[A: Semigroup]: Monoid[Option[A]] = self.delegate[A]
+    implicit def delegate[A: Semigroup]: Monoid[Option[A]] = self.delegate
+    implicit def applicative[A: Monoid]: Monoid[Option[A]] = self.applicative.default.monoid
   }
 
   object semigroup {
     implicit def first[A]: Semigroup[Option[A]] = self.first[A]
     implicit def last[A]: Semigroup[Option[A]] = self.last[A]
-    implicit def delegate[A: Semigroup]: Semigroup[Option[A]] = self.delegate[A]
+    implicit def delegate[A: Semigroup]: Semigroup[Option[A]] = self.delegate
+    implicit def apply[A: Semigroup]: Semigroup[Option[A]] = self.applicative.default.semigroup
   }
 
 }
